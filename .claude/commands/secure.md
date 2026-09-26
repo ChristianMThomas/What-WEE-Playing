@@ -16,7 +16,7 @@ Everything the browser can do, an attacker can do by hand with the publishable k
 - **The publishable key and URL are public by design.** RLS policies are the real access control. A table or view without correct RLS is fully exposed.
 - **Anonymous phone sessions** are authenticated users (`is_anonymous` claim). They should only be able to claim a pairing and use their paired `controller:{userId}` channel, never write games, frames, lobbies or profiles.
 - **Realtime payloads are untrusted.** Any lobby member can broadcast anything on `lobby:{code}`. Throw parameters, pin states and host commands (start, play again, quit) must be validated or ignored if they come from the wrong sender.
-- **Scores are client-written.** The `frames` table accepts rolls from the thrower. Frame validity is only enforced in `src/lib/bowling/scoring.ts` (`InvalidRollsError`), so any write path that skips it can store impossible games and poison leaderboards.
+- **Rolls are client-written.** The `frames` table accepts rolls from the thrower. The `validate_frame` trigger and `game_player_total()` mirror `src/lib/bowling/scoring.ts`, and `finish_game()` computes totals, so check that the SQL and TypeScript rules still match and that no path lets clients write `final_total`.
 - **Auth cookies are readable by page scripts** (the browser Realtime connection needs them), so any XSS means session theft.
 
 ## Known non-issues (don't flag as leaks)
@@ -62,13 +62,13 @@ Give each agent its checklist below, the trust boundaries section above, and the
 - Pairing tokens: enough entropy (`gen_random_bytes`), short expiry, single use, can't be claimed twice or by a registered account unexpectedly.
 - `can_use_realtime_topic()` and the `realtime.messages` policies: a user can't join or send on another user's `controller:` channel or a lobby they aren't in.
 - Views are `security_invoker` (the `leaderboard` view must be).
-- Players can't edit their own `final_total` or `final_rank`, other players' frames, or someone else's lobby or game.
+- Players can't edit `final_total` or `final_rank` at all (only `finish_game()` writes them), or other players' frames, or someone else's lobby or game. Column grants still match what the app writes.
 
 **B. Auth, sessions and rate limits** (`src/proxy.ts`, `src/lib/supabase/`, `supabase/config.toml`, auth pages and routes)
 - Server code authenticates with `getClaims()` or `getUser()`, never trusts `getSession()`'s user.
 - `src/proxy.ts` refreshes the session before anything else runs, and its matcher doesn't skip protected routes.
 - Server Functions and Route Handlers each check auth themselves (proxy coverage alone isn't enough, per the Next docs).
-- The 30-day inactivity logout can't be bypassed (the `wwp-seen` cookie only delays a user's own check).
+- The 30-day inactivity logout can't be bypassed: `last_seen_at` is only written by `touch_last_seen()`, and the `wwp-seen` cookie is HMAC-signed with an issue time (`src/lib/supabase/seen-cookie.ts`).
 - `[auth.rate_limit]` in `config.toml` is sensible; enumeration of 7-digit lobby codes and of usernames is rate limited or harmless.
 - Password rules and email confirmation settings in `config.toml`. Auth errors don't reveal whether an email or username exists (except for the deliberate username availability check).
 

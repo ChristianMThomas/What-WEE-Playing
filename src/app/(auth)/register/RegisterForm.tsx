@@ -12,7 +12,8 @@ import {
   type AvatarLook,
 } from "@/lib/avatar";
 import { passwordChecks } from "@/lib/auth/validation";
-import { register, type RegisterState } from "../actions";
+import { register, type RegisterState } from "../client-auth";
+import { useGoToNoticeOnSignIn } from "../useGoToNoticeOnSignIn";
 
 const LOOK_AHEAD: Gaze = { x: 0, y: 0 };
 // How far (px) the cursor must be from the eyes for the pupils to reach the edge.
@@ -73,6 +74,8 @@ function useGaze() {
 
 export function RegisterForm() {
   const [state, formAction, pending] = useActionState<RegisterState, FormData>(register, {});
+  useGoToNoticeOnSignIn(state.signedIn);
+  const busy = pending || state.signedIn;
   // Controlled so values survive a failed submit and the preview updates live.
   const [fields, setFields] = useState({ email: "", password: "", username: "" });
   const [look, setLook] = useState<AvatarLook>(DEFAULT_AVATAR);
@@ -171,8 +174,8 @@ export function RegisterForm() {
             {state.message}
           </p>
         )}
-        <button type="submit" className="wii-button wii-button-primary mt-2" disabled={pending}>
-          {pending ? "Creating account…" : "Create account"}
+        <button type="submit" className="wii-button wii-button-primary mt-2" disabled={busy}>
+          {busy ? "Creating account…" : "Create account"}
         </button>
       </div>
     </form>

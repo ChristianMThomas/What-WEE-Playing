@@ -33,6 +33,14 @@ The Supabase CLI is a dev dependency, so run it with `npx supabase` or the npm s
 - The `on_auth_user_created` trigger creates the `profiles` row from `signUp()` user metadata (`username`, `skin_tone`, `hairstyle`, `outfit`). It skips anonymous users. A missing or taken username makes signup fail, so check availability first.
 - Phones pair by calling the `claim_pairing(token)` RPC. `can_use_realtime_topic()` controls who can use `lobby:*` and `controller:*` channels, which must be joined as **private** channels.
 - `leaderboard` is a view with `security_invoker` on, so RLS still applies.
+- Clients get **column-level grants**, not whole-table writes. A client insert or update that names a column outside the grant fails with "permission denied". Check `*_harden_rls.sql` before writing to a table.
+- Some writes go only through `security definer` RPCs:
+  - `touch_last_seen()`: the proxy's activity bump.
+  - `finish_game(game_id)`: scores every player from `frames`, sets `final_total`/`final_rank`, and marks the game completed. Clients never write totals.
+  - `claim_pairing(token)`: phones only. A new claim replaces the desktop's earlier pairings.
+- A `validate_frame` trigger rejects impossible rolls, and frames must be written in order. It and `game_player_total()` mirror `src/lib/bowling/scoring.ts`, so change them together.
+- Avatar ids have CHECK constraints matching `src/lib/avatar.ts`. Adding an option needs a migration.
+- Lobby players must be in `lobby_members`; the host is added automatically. Only members can use `lobby:{code}`, and the game creator can only add lobby members, bots or themselves to `game_players`.
 
 ## What this is
 
@@ -48,7 +56,7 @@ A web app that recreates the Wii system: a Wii-style channel menu where each cha
 
 ## Core architecture (spans several specs)
 
-**Auth** (`md/02-authentication-and-sessions.md`): **Supabase Auth**, not custom JWTs, because private Realtime channels authorize with its tokens. Users register with email, password and a unique username. The session lives in `@supabase/ssr` cookies, which page scripts can read, so never render usernames or other user content through `dangerouslySetInnerHTML`. `src/proxy.ts` (Next 16 renamed middleware to proxy) refreshes the session and enforces the 30-day inactivity logout using `profiles.last_seen_at`. Use `@/lib/supabase/client` in Client Components and `@/lib/supabase/server` on the server, and authenticate with `getClaims()` rather than `getSession()`. Phones use anonymous auth plus a `pairings` row.
+**Auth** (`md/02-authentication-and-sessions.md`): **Supabase Auth**, not custom JWTs, because private Realtime channels authorize with its tokens. Users register with email, password and a unique username. The session lives in `@supabase/ssr` cookies, which page scripts can read, so never render usernames or other user content through `dangerouslySetInnerHTML`. `src/proxy.ts` (Next 16 renamed middleware to proxy) refreshes the session and enforces the 30-day inactivity logout using `profiles.last_seen_at`. It skips that check for an hour after the last one using the HMAC-signed `wwp-seen` cookie, which needs the server-only `SESSION_COOKIE_SECRET` env var; without it, every request is checked. The proxy also sets a per-request nonce CSP (`src/lib/csp.ts`), and the root layout calls `connection()` so every page renders dynamically and gets the nonce. New external origins (scripts, APIs, websockets) must be added there. Login and signup run in the browser (`src/app/(auth)/client-auth.ts`) so Supabase's per-IP rate limits see real client IPs; don't move them back into Server Functions. Use `@/lib/supabase/client` in Client Components and `@/lib/supabase/server` on the server, and authenticate with `getClaims()` rather than `getSession()`. Phones use anonymous auth plus a `pairings` row.
 
 **Flow:** register → Wii-menu home → pick a channel → Single Player (vs. a bot that bowls randomly) or Multiplayer → Create Lobby or Join Lobby (7-digit code, or browse open lobbies).
 

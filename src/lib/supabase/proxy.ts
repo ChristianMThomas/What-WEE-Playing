@@ -2,14 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
+import { SEEN_CHECK_INTERVAL_S, SEEN_COOKIE, signSeen, verifySeen } from "./seen-cookie";
 
-// Accounts inactive this long are signed out (md/02-authentication-and-sessions.md).
-const INACTIVITY_LIMIT_MS = 30 * 24 * 60 * 60 * 1000;
-
-// Holds the user id whose activity was recorded within the last hour, so most
-// requests skip the database. Forging it only delays the user's own logout.
-const SEEN_COOKIE = "wwp-seen";
-const SEEN_CHECK_INTERVAL_S = 60 * 60;
+// Signs the wwp-seen cookie, which lets most requests skip the database. Without
+// it, activity is checked on every request.
+const SEEN_SECRET = process.env.SESSION_COOKIE_SECRET;
 
 /**
  * Refreshes the Supabase session cookies and enforces the 30-day inactivity
@@ -43,27 +40,26 @@ export async function updateSession(request: NextRequest) {
 
   // Phone controllers use anonymous sessions with no profile; the rule applies to accounts.
   if (!claims || claims.is_anonymous) return { response, claims: claims ?? null };
-  if (request.cookies.get(SEEN_COOKIE)?.value === claims.sub) return { response, claims };
+  const nowS = Math.floor(Date.now() / 1000);
+  if (SEEN_SECRET && (await verifySeen(SEEN_SECRET, request.cookies.get(SEEN_COOKIE)?.value, claims.sub, nowS))) {
+    return { response, claims };
+  }
 
-  // One round trip: record activity, but only if the user was active within the limit.
-  const cutoff = new Date(Date.now() - INACTIVITY_LIMIT_MS).toISOString();
-  const { data: active, error } = await supabase
-    .from("profiles")
-    .update({ last_seen_at: new Date().toISOString() })
-    .eq("id", claims.sub)
-    .gt("last_seen_at", cutoff)
-    .select("id");
+  // Records activity, but only if the account was active within the last 30 days
+  // (md/02-authentication-and-sessions.md). The limit lives in touch_last_seen().
+  const { data: active, error } = await supabase.rpc("touch_last_seen");
 
   // Never log someone out over a failed query; the next request retries.
   if (error) return { response, claims };
 
-  if (active.length === 0) {
+  if (!active) {
     await supabase.auth.signOut();
     response.cookies.delete(SEEN_COOKIE);
     return { response, claims: null };
   }
 
-  response.cookies.set(SEEN_COOKIE, claims.sub, {
+  if (!SEEN_SECRET) return { response, claims };
+  response.cookies.set(SEEN_COOKIE, await signSeen(SEEN_SECRET, claims.sub, nowS), {
     httpOnly: true,
     sameSite: "lax",
     secure: request.nextUrl.protocol === "https:",

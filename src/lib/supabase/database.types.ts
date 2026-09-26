@@ -111,12 +111,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"lobby_members": {
+                  Row: {
+                    "joined_at": string,"lobby_id": string,"user_id": string
+                  }
+                  Insert: {
+                    "joined_at"?: string,"lobby_id": string,"user_id": string
+                  }
+                  Update: {
+                    "joined_at"?: string,"lobby_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lobby_members_lobby_id_fkey"
+      columns: ["lobby_id"]
+isOneToOne: false
+      referencedRelation: "lobbies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "lobby_members_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"pairings": {
                   Row: {
                     "claimed_at": string | null,"created_at": string,"expires_at": string,"id": string,"phone_user_id": string | null,"token": string,"user_id": string
                   }
                   Insert: {
-                    "claimed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone_user_id"?: string | null,"token"?: string,"user_id": string
+                    "claimed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone_user_id"?: string | null,"token"?: string,"user_id"?: string
                   }
                   Update: {
                     "claimed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone_user_id"?: string | null,"token"?: string,"user_id"?: string
@@ -168,7 +193,19 @@ isOneToOne: false
 "claim_pairing":
 { Args: { "pairing_token": string }; Returns: string
                            },
+"finish_game":
+{ Args: { "finished_game_id": string }; Returns: undefined
+                           },
+"frame_done":
+{ Args: { "bonus_frame": boolean,"rolls": (number)[] }; Returns: boolean
+                           },
+"game_player_total":
+{ Args: { "player_id": string }; Returns: number
+                           },
 "is_anonymous":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"touch_last_seen":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "username_available":

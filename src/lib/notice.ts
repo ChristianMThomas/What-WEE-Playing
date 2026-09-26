@@ -12,6 +12,8 @@ export function safeNext(next: unknown): string {
   if (typeof next !== "string" || !next.startsWith("/")) return "/";
   // "//host" and "/\host" are treated as other origins by browsers.
   if (next.startsWith("//") || next.startsWith("/\\")) return "/";
+  // Browsers strip tabs and newlines from URLs, so "/\t/host" also becomes "//host".
+  if (/[\x00-\x1f\x7f\\]/.test(next)) return "/";
   if (next === "/notice" || next.startsWith("/notice?") || next.startsWith("/notice/")) return "/";
   return next;
 }

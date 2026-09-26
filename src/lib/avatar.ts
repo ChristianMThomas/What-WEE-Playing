@@ -1,5 +1,7 @@
-// Avatar choices (md/07-avatar-system.md). Profiles store the option ids; the
-// database doesn't constrain them, so always read them through avatarFromProfile().
+// Avatar choices (md/07-avatar-system.md). Profiles store the option ids, and
+// check constraints in supabase/migrations only allow these ids plus the column
+// default "default", so adding an option needs a migration too. Read stored
+// values through avatarFromProfile(), which maps "default" to a real option.
 
 export const SKIN_TONES = [
   { id: "porcelain", label: "Porcelain", color: "#f9dcc4" },

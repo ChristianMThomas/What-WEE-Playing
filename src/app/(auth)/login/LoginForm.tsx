@@ -2,10 +2,13 @@
 
 import { useActionState } from "react";
 import { TextField } from "@/components/Field";
-import { login, type LoginState } from "../actions";
+import { login, type LoginState } from "../client-auth";
+import { useGoToNoticeOnSignIn } from "../useGoToNoticeOnSignIn";
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState<LoginState, FormData>(login, {});
+  useGoToNoticeOnSignIn(state.signedIn);
+  const busy = pending || state.signedIn;
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
@@ -33,8 +36,8 @@ export function LoginForm() {
           {state.message}
         </p>
       )}
-      <button type="submit" className="wii-button wii-button-primary mt-2" disabled={pending}>
-        {pending ? "Logging in…" : "Log in"}
+      <button type="submit" className="wii-button wii-button-primary mt-2" disabled={busy}>
+        {busy ? "Logging in…" : "Log in"}
       </button>
     </form>
   );

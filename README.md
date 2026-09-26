@@ -57,6 +57,9 @@ Create `.env.local` with the values `db:start` printed:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key from db:start>
+# Server-only secret that signs the inactivity-check cookie. Generate one with:
+# node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+SESSION_COOKIE_SECRET=<random string>
 ```
 
 Then start the app:
