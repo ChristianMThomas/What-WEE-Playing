@@ -1,4 +1,4 @@
-﻿# WhatWiPlaying
+# WhatWiPlaying
 
 A web app that recreates the Wii: a channel menu where each channel is a game, with your phone as the Wii remote. Bowling is the first channel and Just Dance is planned next.
 
@@ -87,7 +87,7 @@ iOS only gives websites motion data over HTTPS, and only after you tap to grant 
 ## Project layout
 
 ```
-md/                    design specs (01â€“11), the source of truth for features
+md/                    design specs (01–11), the source of truth for features
 src/app/               Next.js App Router pages
 src/lib/supabase/      Supabase client code and generated types
 supabase/migrations/   database schema, RLS policies and Realtime auth
