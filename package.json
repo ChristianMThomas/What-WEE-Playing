@@ -19,6 +19,7 @@
     "@dimforge/rapier3d-deterministic-compat": "0.21.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "lucide-react": "^1.48.0",
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",

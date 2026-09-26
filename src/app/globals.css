@@ -1,26 +1,197 @@
 @import "tailwindcss";
 
+/* Wii menu palette. The Wii is always light, so there's no dark variant. */
+@theme {
+  --color-wii-blue: #34bfed;
+  --color-wii-blue-dark: #1a9ccc;
+  --color-wii-ink: #5b5f63;
+  --color-wii-line: #cfd4d9;
+  --color-wii-panel: #ffffff;
+  --color-wii-bg: #eef1f4;
+  --color-wii-error: #d64545;
+  --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-wii-bg);
+  /* Faint pinstripes like the Wii menu background. */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 3px,
+    rgb(255 255 255 / 0.55) 3px 4px
+  );
+  color: var(--color-wii-ink);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .wii-panel {
+    @apply rounded-[2rem] border-2 border-wii-line bg-wii-panel shadow-[0_6px_24px_rgb(0_0_0/0.08)];
+  }
+
+  .wii-button {
+    @apply inline-flex h-12 items-center justify-center rounded-full border-2 border-wii-line bg-white px-8 text-lg font-bold text-wii-ink transition
+      hover:border-wii-blue hover:text-wii-blue-dark hover:shadow-[0_0_0_4px_rgb(52_191_237/0.25)]
+      focus-visible:border-wii-blue focus-visible:shadow-[0_0_0_4px_rgb(52_191_237/0.35)] focus-visible:outline-none
+      disabled:cursor-wait disabled:opacity-60;
+  }
+
+  /* Use together with .wii-button. */
+  .wii-button-primary {
+    @apply border-wii-blue bg-wii-blue text-white hover:bg-wii-blue-dark hover:text-white;
+  }
+
+  .wii-input {
+    @apply h-12 w-full rounded-2xl border-2 border-wii-line bg-white px-4 text-base text-wii-ink transition
+      focus:border-wii-blue focus:shadow-[0_0_0_4px_rgb(52_191_237/0.25)] focus:outline-none
+      aria-invalid:border-wii-error;
+  }
+}
+
+/* Settings screens: black with pinstripes, like the Wii's settings menus. */
+.settings-stripes {
+  background-color: #000;
+  background-image: repeating-linear-gradient(to bottom, #151515 0 2px, #242424 2px 4px);
+}
+
+@keyframes wii-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@layer components {
+  /* A screen opening, like the Wii zooming into a menu. */
+  .wii-enter {
+    animation: wii-enter 280ms ease-out both;
+  }
+
+  /* Big tile with a blue frame (Settings > Account Management / System Settings). */
+  .wii-tile {
+    @apply flex flex-col overflow-hidden rounded-[1.25rem] border-4 border-wii-blue bg-gradient-to-b from-[#bdbdbd] via-white to-white text-[#333]
+      shadow-[inset_0_0_0_3px_#fff,0_0_0_3px_#e8e8e8] transition duration-150
+      hover:shadow-[inset_0_0_0_3px_#fff,0_0_0_3px_#e8e8e8,0_0_24px_4px_rgb(52_191_237/0.7)]
+      focus-visible:shadow-[inset_0_0_0_3px_#fff,0_0_0_3px_#e8e8e8,0_0_24px_4px_rgb(52_191_237/0.7)] focus-visible:outline-none;
+  }
+
+  /* Long pill option with a blue frame (the Wii's settings list buttons). */
+  .wii-pill {
+    @apply relative flex h-16 w-full items-center justify-center rounded-full border-4 border-wii-blue bg-gradient-to-b from-white to-[#d4d4d4] px-8 text-2xl font-bold text-[#333]
+      shadow-[inset_0_0_0_3px_#fff,0_0_0_3px_#e8e8e8] transition duration-150 sm:h-20 sm:text-3xl
+      hover:from-white hover:to-white hover:shadow-[inset_0_0_0_3px_#fff,0_0_0_3px_#e8e8e8,0_0_20px_3px_rgb(52_191_237/0.7)]
+      focus-visible:shadow-[inset_0_0_0_3px_#fff,0_0_0_3px_#e8e8e8,0_0_20px_3px_rgb(52_191_237/0.7)] focus-visible:outline-none
+      disabled:cursor-not-allowed;
+  }
+
+  /* The Back pill in the bottom left; turns lavender when pointed at. */
+  .wii-back {
+    @apply inline-flex h-14 min-w-44 items-center justify-center rounded-full bg-gradient-to-b from-white to-[#c4c4c4] px-10 text-2xl font-bold text-[#333]
+      shadow-[inset_0_2px_0_#fff] transition duration-150 sm:h-16 sm:min-w-60 sm:text-3xl
+      hover:from-[#d6dbff] hover:to-[#9aa6f5] hover:text-[#1d2a8a]
+      focus-visible:from-[#d6dbff] focus-visible:to-[#9aa6f5] focus-visible:outline-none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wii-enter {
+    animation: none;
+  }
+}
+
+/* Boot notice: the text fades in, then the prompt fades in and gently pulses, like the Wii. */
+@keyframes notice-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes notice-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.notice-fade {
+  animation: notice-fade 700ms ease-out both;
+}
+
+.notice-prompt {
+  animation:
+    notice-fade 700ms ease-out 900ms both,
+    notice-pulse 2.4s ease-in-out 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice-fade,
+  .notice-prompt {
+    animation: none;
+  }
+}
+
+/* Bowling screens, modeled on Wii Sports' menus: dark panels on blue, glossy choice buttons. */
+.bowling-backdrop {
+  background:
+    radial-gradient(circle at 78% 55%, rgb(255 255 255 / 0.14) 0 22%, transparent 22.3%),
+    radial-gradient(circle at 78% 55%, transparent 0 30%, rgb(255 255 255 / 0.08) 30.3% 31%, transparent 31.3%),
+    linear-gradient(160deg, #3aa9e8 0%, #1576c2 55%, #0c4f93 100%);
+}
+
+@keyframes title-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer components {
+  .title-rise {
+    animation: title-rise 500ms ease-out 150ms both;
+  }
+
+  .bowl-panel {
+    @apply flex flex-col overflow-hidden rounded-[1.75rem] border-4 border-[#0a1f38] bg-[#0d2c4d]/85 shadow-[0_8px_30px_rgb(0_0_0/0.35)];
+  }
+
+  .bowl-panel-title {
+    @apply bg-[#07203b] px-6 py-3 text-center text-2xl font-bold text-white sm:py-4 sm:text-4xl;
+  }
+
+  /* Glossy choice button with faint horizontal lines, like Wii Sports' menus. */
+  .bowl-choice {
+    @apply relative flex flex-col items-center justify-center gap-1 rounded-2xl border-[3px] border-white text-center text-[#222]
+      bg-[repeating-linear-gradient(to_bottom,transparent_0_3px,rgb(0_0_0/0.035)_3px_5px),linear-gradient(to_bottom,#ffffff,#d5e3ea)]
+      shadow-[0_3px_0_#0a1f38,inset_0_2px_0_#fff] transition duration-150
+      hover:bg-[repeating-linear-gradient(to_bottom,transparent_0_3px,rgb(0_0_0/0.035)_3px_5px),linear-gradient(to_bottom,#e4f8ff,#8fdcf7)]
+      hover:shadow-[0_3px_0_#0a1f38,0_0_0_4px_rgb(143_220_247/0.6)]
+      focus-visible:shadow-[0_3px_0_#0a1f38,0_0_0_4px_rgb(143_220_247/0.8)] focus-visible:outline-none
+      aria-pressed:bg-[repeating-linear-gradient(to_bottom,transparent_0_3px,rgb(0_0_0/0.035)_3px_5px),linear-gradient(to_bottom,#e4f8ff,#8fdcf7)]
+      aria-pressed:shadow-[0_3px_0_#0a1f38,0_0_0_4px_rgb(143_220_247/0.9)]
+      disabled:cursor-not-allowed disabled:opacity-60;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-rise {
+    animation: none;
+  }
 }

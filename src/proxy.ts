@@ -1,0 +1,54 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { NOTICE_COOKIE } from "@/lib/notice";
+import { updateSession } from "@/lib/supabase/proxy";
+
+// Pages for signed-out visitors; signed-in players get sent home.
+const AUTH_PAGES = ["/login", "/register"];
+// Phones open the controller with an anonymous session, so it isn't behind login.
+const PUBLIC_PREFIXES = ["/controller"];
+
+export async function proxy(request: NextRequest) {
+  const { response, claims } = await updateSession(request);
+  const { pathname, search } = request.nextUrl;
+  const hasAccount = claims !== null && !claims.is_anonymous;
+  const isPublic = PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  if (AUTH_PAGES.includes(pathname)) {
+    return hasAccount ? redirect(request, response, "/") : response;
+  }
+  if (!hasAccount && !isPublic) {
+    return redirect(request, response, "/login");
+  }
+
+  // Signed-in players see the boot notice once per browser session, like the Wii at
+  // power-on (login and register also send them there directly). Clicking through it
+  // is what lets the home menu music start. Only page visits are redirected; form
+  // posts and API calls pass through.
+  if (
+    hasAccount &&
+    request.method === "GET" &&
+    pathname !== "/notice" &&
+    !pathname.startsWith("/api/") &&
+    !request.cookies.has(NOTICE_COOKIE)
+  ) {
+    const next = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + search)}`;
+    return redirect(request, response, `/notice${next}`);
+  }
+  return response;
+}
+
+// Keeps any session cookies updateSession set (refreshes, inactivity logout) on the redirect.
+function redirect(request: NextRequest, from: NextResponse, to: string) {
+  const response = NextResponse.redirect(new URL(to, request.url));
+  for (const cookie of from.cookies.getAll()) response.cookies.set(cookie);
+  const cacheControl = from.headers.get("Cache-Control");
+  if (cacheControl) response.headers.set("Cache-Control", cacheControl);
+  return response;
+}
+
+export const config = {
+  matcher: [
+    // Everything except static files, images and audio.
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|mp3|ogg|wav)$).*)",
+  ],
+};

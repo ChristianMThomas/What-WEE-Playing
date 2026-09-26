@@ -48,7 +48,7 @@ A web app that recreates the Wii system: a Wii-style channel menu where each cha
 
 ## Core architecture (spans several specs)
 
-**Auth** (`md/02-authentication-and-sessions.md`): **Supabase Auth**, not custom JWTs, because private Realtime channels authorize with its tokens. Users register with email, password and a unique username. The session lives in `@supabase/ssr` cookies, which page scripts can read, so never render usernames or other user content through `dangerouslySetInnerHTML`. Next.js middleware enforces the 30-day inactivity logout using `profiles.last_seen_at`. Phones use anonymous auth plus a `pairings` row.
+**Auth** (`md/02-authentication-and-sessions.md`): **Supabase Auth**, not custom JWTs, because private Realtime channels authorize with its tokens. Users register with email, password and a unique username. The session lives in `@supabase/ssr` cookies, which page scripts can read, so never render usernames or other user content through `dangerouslySetInnerHTML`. `src/proxy.ts` (Next 16 renamed middleware to proxy) refreshes the session and enforces the 30-day inactivity logout using `profiles.last_seen_at`. Use `@/lib/supabase/client` in Client Components and `@/lib/supabase/server` on the server, and authenticate with `getClaims()` rather than `getSession()`. Phones use anonymous auth plus a `pairings` row.
 
 **Flow:** register → Wii-menu home → pick a channel → Single Player (vs. a bot that bowls randomly) or Multiplayer → Create Lobby or Join Lobby (7-digit code, or browse open lobbies).
 

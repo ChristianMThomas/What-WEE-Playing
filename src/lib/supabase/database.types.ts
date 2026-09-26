@@ -132,13 +132,13 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"hairstyle": string,"id": string,"last_seen_at": string,"outfit": string,"skin_tone": string,"username": string
+                    "created_at": string,"hair_color": string,"hairstyle": string,"id": string,"last_seen_at": string,"outfit": string,"skin_tone": string,"username": string
                   }
                   Insert: {
-                    "created_at"?: string,"hairstyle"?: string,"id": string,"last_seen_at"?: string,"outfit"?: string,"skin_tone"?: string,"username": string
+                    "created_at"?: string,"hair_color"?: string,"hairstyle"?: string,"id": string,"last_seen_at"?: string,"outfit"?: string,"skin_tone"?: string,"username": string
                   }
                   Update: {
-                    "created_at"?: string,"hairstyle"?: string,"id"?: string,"last_seen_at"?: string,"outfit"?: string,"skin_tone"?: string,"username"?: string
+                    "created_at"?: string,"hair_color"?: string,"hairstyle"?: string,"id"?: string,"last_seen_at"?: string,"outfit"?: string,"skin_tone"?: string,"username"?: string
                   }
                   Relationships: [
                     
@@ -170,6 +170,9 @@ isOneToOne: false
                            },
 "is_anonymous":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"username_available":
+{ Args: { "name": string }; Returns: boolean
                            }
           }
           Enums: {
