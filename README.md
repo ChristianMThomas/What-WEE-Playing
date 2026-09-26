@@ -1,4 +1,4 @@
-# WhatWiPlaying
+# WhatWiiPlaying
 
 A web app that recreates the Wii: a channel menu where each channel is a game, with your phone as the Wii remote. Bowling is the first channel and Just Dance is planned next.
 
