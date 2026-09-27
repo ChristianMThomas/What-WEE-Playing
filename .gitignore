@@ -16,6 +16,7 @@
 # next.js
 /.next/
 /out/
+/whatwiiplaying-site.tar.gz
 
 # production
 /build

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
 
-export const metadata: Metadata = { title: "Log in · WhatWiPlaying" };
+export const metadata: Metadata = { title: "Log in · WhatWiiPlaying" };
 
 export default function LoginPage() {
   return (

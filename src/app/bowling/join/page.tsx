@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { BowlingPanel, BowlingScreen } from "@/components/bowling/BowlingScreen";
 
-export const metadata: Metadata = { title: "Join Lobby · WhatWiPlaying" };
+export const metadata: Metadata = { title: "Join Lobby · WhatWiiPlaying" };
 
 // Design pass: sample lobbies. The real list comes from open rows in the lobbies table.
 const SAMPLE_LOBBIES = [

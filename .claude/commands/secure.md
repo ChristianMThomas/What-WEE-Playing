@@ -1,11 +1,11 @@
 ---
 name: secure
-description: Security audit for WhatWiPlaying. Sub-agents sweep every folder for leaked credentials and check Supabase RLS, Realtime channel auth, sessions, input trust, XSS, headers and dependencies in parallel. Then it reports findings, fixes the safe ones, and asks before risky changes. Use when the user says "secure", "security check", "audit", "is this safe", "check for leaked keys", "vulnerabilities", or before shipping auth, database, or multiplayer code.
+description: Security audit for WhatWiiPlaying. Sub-agents sweep every folder for leaked credentials and check Supabase RLS, Realtime channel auth, sessions, input trust, XSS, headers and dependencies in parallel. Then it reports findings, fixes the safe ones, and asks before risky changes. Use when the user says "secure", "security check", "audit", "is this safe", "check for leaked keys", "vulnerabilities", or before shipping auth, database, or multiplayer code.
 ---
 
 # Secure
 
-You're auditing WhatWiPlaying: a Next.js 16 app (App Router, `src/proxy.ts` in place of middleware) on Supabase (Auth, Postgres with RLS, Realtime). Phones join as controllers through anonymous auth, and game clients send throws and scores to each other. Your job is to find security problems, fix the safe ones, and ask before the risky ones.
+You're auditing WhatWiiPlaying: a Next.js 16 app (App Router), exported as static files with no server code (DEPLOY.md), on Supabase (Auth, Postgres with RLS, Realtime). Phones join as controllers through anonymous auth, and game clients send throws and scores to each other. Your job is to find security problems, fix the safe ones, and ask before the risky ones.
 
 **Audit first, act second.** Run the whole audit and report it before changing anything.
 
@@ -64,26 +64,26 @@ Give each agent its checklist below, the trust boundaries section above, and the
 - Views are `security_invoker` (the `leaderboard` view must be).
 - Players can't edit `final_total` or `final_rank` at all (only `finish_game()` writes them), or other players' frames, or someone else's lobby or game. Column grants still match what the app writes.
 
-**B. Auth, sessions and rate limits** (`src/proxy.ts`, `src/lib/supabase/`, `supabase/config.toml`, auth pages and routes)
-- Server code authenticates with `getClaims()` or `getUser()`, never trusts `getSession()`'s user.
-- `src/proxy.ts` refreshes the session before anything else runs, and its matcher doesn't skip protected routes.
-- Server Functions and Route Handlers each check auth themselves (proxy coverage alone isn't enough, per the Next docs).
-- The 30-day inactivity logout can't be bypassed: `last_seen_at` is only written by `touch_last_seen()`, and the `wwp-seen` cookie is HMAC-signed with an issue time (`src/lib/supabase/seen-cookie.ts`).
+**B. Auth, sessions and rate limits** (`src/components/session/SessionProvider.tsx`, `src/lib/supabase/`, `supabase/config.toml`, auth pages)
+- There's no server: the session guard runs in the browser and only decides what to show. Anything it hides must also be enforced by RLS, since anyone can call the API directly.
+- No server-only code crept back in (no `src/proxy.ts`, Server Actions or Route Handlers; `npm run build` must still export).
+- Auth checks use `getClaims()` or `getUser()`, never trust `getSession()`'s user.
+- The 30-day inactivity logout: `last_seen_at` is only written by `touch_last_seen()`, which refuses accounts idle over 30 days, and the guard signs those out.
 - `[auth.rate_limit]` in `config.toml` is sensible; enumeration of 7-digit lobby codes and of usernames is rate limited or harmless.
 - Password rules and email confirmation settings in `config.toml`. Auth errors don't reveal whether an email or username exists (except for the deliberate username availability check).
 
 **C. Input trust, injection and XSS** (`src/`)
-- Route Handlers and Server Functions validate input with a schema. Frame writes run through `scoreGame`/`frameState`.
+- Frame writes run through `scoreGame`/`frameState`, and RPC inputs are validated in SQL.
 - Realtime handlers validate broadcast payloads: throw parameters bounded and finite (no `NaN`/`Infinity` fed into Rapier), host-only commands checked against the lobby's `host_id`, and the pin-state safety check only accepted from the current thrower.
 - Supabase filter injection: user input interpolated into `.or()`, `.filter()`, `.textSearch()` or raw RPC SQL strings.
 - `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function`, and user content (usernames) rendered outside React escaping, including Three.js text or sprite labels and `<canvas>` code.
 - Open redirects, such as a `?next=` or `redirectTo` taken from the URL without checking it's a relative path.
-- `"use client"` files importing `@/lib/supabase/server` or any server-only secret.
+- Nothing secret is in the build: every env var the site uses is public (`NEXT_PUBLIC_`).
 
 **D. Headers, frontend exposure, dependencies and logging**
-- A Content Security Policy (required by md/02). It must allow the Supabase URL and `wss:` for Realtime, and the Rapier WASM (`'wasm-unsafe-eval'`). Plus `X-Frame-Options`/`frame-ancestors`, `X-Content-Type-Options`, `Referrer-Policy` and HSTS in production. Check `next.config.ts` and `src/proxy.ts`.
+- A Content Security Policy (required by md/02). It must allow the Supabase URL and `wss:` for Realtime, and the Rapier WASM (`'wasm-unsafe-eval'`). Plus `X-Frame-Options`/`frame-ancestors`, `X-Content-Type-Options`, `Referrer-Policy` and HSTS in production. They come from `src/lib/csp.ts`: `next.config.ts` sends them in dev, and `scripts/finish-export.mjs` writes them into `out/.htaccess` for production.
 - `Permissions-Policy` still allows the motion sensors and wake lock that `/controller` needs.
-- Only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are `NEXT_PUBLIC_`. Nothing sensitive is in `.next/static` if a build exists.
+- Only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are `NEXT_PUBLIC_` (plus `NEXT_PUBLIC_APP_URL` for the dev tunnel). Nothing sensitive is in `out/` or `.next/static` if a build exists.
 - `npm audit --omit=dev` with high and critical findings. Note that `@dimforge/rapier3d-deterministic-compat` must stay pinned to an exact version (it's a determinism requirement, not a finding).
 - No tokens, pairing tokens, passwords or full request bodies in `console.log`. Errors shown to users don't include stack traces.
 
@@ -94,7 +94,7 @@ Collect all the reports, dedupe them (the same issue can come from a folder agen
 ## Step 5: fix
 
 - **Fix without asking:** `.gitignore` gaps, missing non-CSP security headers in `next.config.ts`, input validation on a route, removing a `console.log` of a token, escaping or rendering fixes for XSS, and redacting a real secret from a working-tree file (the user still has to rotate it).
-- **Ask first:** anything that changes RLS or the schema (always as a **new** migration via `npx supabase migration new <name>`, never by editing an applied one), changes to `src/proxy.ts` or auth flows, adding a CSP (it can break Next's scripts, Supabase Realtime or Rapier WASM until tuned), `config.toml` auth settings, and new dependencies such as `zod`. Give the risk in one line.
+- **Ask first:** anything that changes RLS or the schema (always as a **new** migration via `npx supabase migration new <name>`, never by editing an applied one), changes to `SessionProvider` or auth flows, CSP changes (they can break Next's scripts, Supabase Realtime or Rapier WASM until tuned), `config.toml` auth settings, and new dependencies such as `zod`. Give the risk in one line.
 - **Never do:** rotate keys, rewrite git history, force-push, commit or push (that's `/ship`), change settings on a hosted Supabase project, or run `npm audit fix --force`. Tell the user how to do these themselves.
 
 After fixing, run `npm run lint`, `npm run typecheck` and `npm test`. If you added a migration, run `npm run db:reset` and `npm run db:types` and confirm the reset succeeds.

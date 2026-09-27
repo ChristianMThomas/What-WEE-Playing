@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SlidersHorizontal, UserCog, type LucideIcon } from "lucide-react";
 import { SettingsScreen } from "@/components/settings/SettingsScreen";
 
-export const metadata: Metadata = { title: "Settings · WhatWiPlaying" };
+export const metadata: Metadata = { title: "Settings · WhatWiiPlaying" };
 
 const SECTIONS: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/settings/account", label: "Account Management", Icon: UserCog },

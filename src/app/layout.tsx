@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
-import { connection } from "next/server";
+import { UiSounds } from "@/components/UiSounds";
 import { MenuMusic } from "@/components/MenuMusic";
+import { SessionProvider } from "@/components/session/SessionProvider";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -10,19 +11,18 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "WhatWiPlaying",
-  description: "Wii-style games in your browser, with your phone as the remote.",
+  title: "WhatWiiPlaying",
+  // A private fan project: keep it out of search engines and link previews.
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false, noimageindex: true } },
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // Render every page per request: the CSP nonce (src/proxy.ts) can only be
-  // added to scripts at request time, and prerendered pages would be blocked.
-  await connection();
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${nunito.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        {children}
+        <SessionProvider>{children}</SessionProvider>
         <MenuMusic />
+        <UiSounds />
       </body>
     </html>
   );

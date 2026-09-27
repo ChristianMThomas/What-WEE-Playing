@@ -29,7 +29,7 @@ export function HomeBar() {
       </svg>
 
       <div className="relative flex h-full items-end justify-between px-4 pb-5 sm:px-8 sm:pb-6">
-        <Link href="/settings" className={ROUND_BUTTON} aria-label="Settings" title="Settings">
+        <Link href="/settings" data-sound="settings" className={ROUND_BUTTON} aria-label="Settings" title="Settings">
           <Settings aria-hidden="true" strokeWidth={2.25} className="size-8 text-[#8a8f94] sm:size-9" />
         </Link>
 

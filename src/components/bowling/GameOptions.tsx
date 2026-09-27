@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FrameCount, ScoringMode } from "@/lib/bowling/scoring";
+import type { FrameCount, GameConfig, ScoringMode } from "@/lib/bowling/scoring";
 
 const LENGTHS: { value: FrameCount; label: string; detail: string }[] = [
   { value: 5, label: "Swift Play", detail: "5 frames" },
@@ -13,13 +13,33 @@ const SCORING: { value: ScoringMode; label: string; detail: string }[] = [
   { value: "basic", label: "Basic", detail: "Just pins per frame" },
 ];
 
+export const DEFAULT_GAME_CONFIG: GameConfig = { frameCount: 10, scoringMode: "standard" };
+
 /**
  * The two game settings (md/05): length and scoring, chosen independently.
- * Design pass: the choice lives in component state until games are created.
+ * Pass value and onChange to read the choice; without them it keeps its own state.
  */
-export function GameOptions({ compact = false, disabled = false }: { compact?: boolean; disabled?: boolean }) {
-  const [frameCount, setFrameCount] = useState<FrameCount>(10);
-  const [scoring, setScoring] = useState<ScoringMode>("standard");
+export function GameOptions({
+  compact = false,
+  disabled = false,
+  value,
+  onChange,
+}: {
+  compact?: boolean;
+  disabled?: boolean;
+  value?: GameConfig;
+  onChange?: (config: GameConfig) => void;
+}) {
+  const [own, setOwn] = useState(DEFAULT_GAME_CONFIG);
+  const config = value ?? own;
+  const set = (change: Partial<GameConfig>) => {
+    const next = { ...config, ...change };
+    setOwn(next);
+    onChange?.(next);
+  };
+  const { frameCount, scoringMode: scoring } = config;
+  const setFrameCount = (frameCount: FrameCount) => set({ frameCount });
+  const setScoring = (scoringMode: ScoringMode) => set({ scoringMode });
 
   return (
     <div className={`flex flex-col ${compact ? "gap-4" : "gap-6"}`}>

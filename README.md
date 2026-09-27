@@ -57,9 +57,6 @@ Create `.env.local` with the values `db:start` printed:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key from db:start>
-# Server-only secret that signs the inactivity-check cookie. Generate one with:
-# node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
-SESSION_COOKIE_SECRET=<random string>
 ```
 
 Then start the app:
@@ -72,7 +69,22 @@ Supabase Studio runs at http://localhost:54323, and the test email inbox is at h
 
 ### Testing on a phone
 
-iOS only gives websites motion data over HTTPS, and only after you tap to grant permission. To try the controller on a real phone during development, expose the dev server through a tunnel such as [ngrok](https://ngrok.com).
+iOS only gives websites motion data over HTTPS, and only after you tap to grant permission. To try the controller on a real phone during development, expose the dev server through [ngrok](https://ngrok.com):
+
+1. Install ngrok, sign up for a free account, and run `ngrok config add-authtoken <token>`.
+2. Claim your free static domain in the ngrok dashboard (Domains), e.g. `your-name.ngrok-free.app`.
+3. Add it to `.env.local` and restart `npm run dev`:
+   ```
+   NEXT_PUBLIC_APP_URL=https://your-name.ngrok-free.app
+   ```
+4. Run the tunnel alongside the dev server: `ngrok http --url=your-name.ngrok-free.app 3000`
+5. On your computer, open Bowling and press **Pair Phone**, then scan the code with your phone's camera. ngrok shows a one-time "Visit Site" warning page on the phone first.
+
+Only the one tunnel is needed. The local Supabase stack isn't reachable from a phone, so in development it's also served under `/supabase` on the same site (see `next.config.ts`), and the controller uses that.
+
+## Deploying
+
+Production is a static site: `npm run build` exports it to `out/`, which is uploaded to Hostinger's plain web hosting at whatwiiplaying.com, with a hosted Supabase project as the backend. See [DEPLOY.md](DEPLOY.md).
 
 ## Scripts
 

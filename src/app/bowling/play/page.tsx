@@ -4,7 +4,7 @@ import { Bot, Users } from "lucide-react";
 import { BowlingPanel, BowlingScreen } from "@/components/bowling/BowlingScreen";
 import { PhoneRemotePanel } from "@/components/bowling/PhoneRemotePanel";
 
-export const metadata: Metadata = { title: "Bowling · WhatWiPlaying" };
+export const metadata: Metadata = { title: "Bowling · WhatWiiPlaying" };
 
 const MODES = [
   { href: "/bowling/single", label: "Single Player", detail: "You vs. a bot", Icon: Bot },

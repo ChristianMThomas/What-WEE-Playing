@@ -35,12 +35,16 @@ The Supabase CLI is a dev dependency, so run it with `npx supabase` or the npm s
 - `leaderboard` is a view with `security_invoker` on, so RLS still applies.
 - Clients get **column-level grants**, not whole-table writes. A client insert or update that names a column outside the grant fails with "permission denied". Check `*_harden_rls.sql` before writing to a table.
 - Some writes go only through `security definer` RPCs:
-  - `touch_last_seen()`: the proxy's activity bump.
+  - `touch_last_seen()`: the activity bump behind the 30-day logout, called by the session guard.
   - `finish_game(game_id)`: scores every player from `frames`, sets `final_total`/`final_rank`, and marks the game completed. Clients never write totals.
   - `claim_pairing(token)`: phones only. A new claim replaces the desktop's earlier pairings.
-- A `validate_frame` trigger rejects impossible rolls, and frames must be written in order. It and `game_player_total()` mirror `src/lib/bowling/scoring.ts`, so change them together.
+- A `validate_frame` trigger rejects impossible rolls, and frames must be written in order. Rolls are write-once: an update can only fill in the next empty roll, never change or clear one, so there is no "undo roll". It and `game_player_total()` mirror `src/lib/bowling/scoring.ts`, so change them together.
 - Avatar ids have CHECK constraints matching `src/lib/avatar.ts`. Adding an option needs a migration.
 - Lobby players must be in `lobby_members`; the host is added automatically. Only members can use `lobby:{code}`, and the game creator can only add lobby members, bots or themselves to `game_players`.
+
+## Deployment
+
+`DEPLOY.md` has the steps. Production is a **static export**: `npm run build` writes `out/` (`output: "export"`, `trailingSlash: true`, set only for builds in `next.config.ts`), `npm run package` packs it, and it's uploaded to Hostinger's plain web hosting at whatwiiplaying.com, with hosted Supabase as the backend. So there is **no server code**: no proxy, Server Actions, Route Handlers, `cookies()`/`headers()`, dynamic routes without `generateStaticParams`, or reading `searchParams` in a page (use `useSearchParams` in a client component inside `<Suspense>`). `scripts/finish-export.mjs` runs after `next build`: it writes `out/.htaccess` (the security headers from `src/lib/csp.ts`) and flattens Next's nested segment prefetch files, which otherwise 404. Builds for upload need `.env.production.local` with the hosted Supabase URL and key.
 
 ## What this is
 
@@ -56,7 +60,7 @@ A web app that recreates the Wii system: a Wii-style channel menu where each cha
 
 ## Core architecture (spans several specs)
 
-**Auth** (`md/02-authentication-and-sessions.md`): **Supabase Auth**, not custom JWTs, because private Realtime channels authorize with its tokens. Users register with email, password and a unique username. The session lives in `@supabase/ssr` cookies, which page scripts can read, so never render usernames or other user content through `dangerouslySetInnerHTML`. `src/proxy.ts` (Next 16 renamed middleware to proxy) refreshes the session and enforces the 30-day inactivity logout using `profiles.last_seen_at`. It skips that check for an hour after the last one using the HMAC-signed `wwp-seen` cookie, which needs the server-only `SESSION_COOKIE_SECRET` env var; without it, every request is checked. The proxy also sets a per-request nonce CSP (`src/lib/csp.ts`), and the root layout calls `connection()` so every page renders dynamically and gets the nonce. New external origins (scripts, APIs, websockets) must be added there. Login and signup run in the browser (`src/app/(auth)/client-auth.ts`) so Supabase's per-IP rate limits see real client IPs; don't move them back into Server Functions. Use `@/lib/supabase/client` in Client Components and `@/lib/supabase/server` on the server, and authenticate with `getClaims()` rather than `getSession()`. Phones use anonymous auth plus a `pairings` row.
+**Auth** (`md/02-authentication-and-sessions.md`): **Supabase Auth**, not custom JWTs, because private Realtime channels authorize with its tokens. Users register with email, password and a unique username. The session lives in `@supabase/ssr` cookies in the browser (marked Secure in production via `AUTH_COOKIE_OPTIONS` in `src/lib/supabase/env.ts`), which page scripts can read, so never render usernames or other user content through `dangerouslySetInnerHTML`. With no server, `SessionProvider` (`src/components/session/SessionProvider.tsx`, in the root layout) does the guarding: it sends signed-out visitors to `/login` and signed-in ones away from it, shows the boot notice once per browser session, and enforces the 30-day inactivity logout by calling `touch_last_seen()` at most hourly. Pages get the player from `useProfile()`. This only decides what to show; RLS is what protects data. The CSP can't use a nonce on static files, so scripts are `'self' 'unsafe-inline'`; new external origins (scripts, APIs, websockets) must be added in `src/lib/csp.ts`. Login and signup call Supabase from the browser (`src/app/(auth)/client-auth.ts`). Use `@/lib/supabase/client` and authenticate with `getClaims()` rather than `getSession()`. Phones use anonymous auth plus a `pairings` row.
 
 **Flow:** register → Wii-menu home → pick a channel → Single Player (vs. a bot that bowls randomly) or Multiplayer → Create Lobby or Join Lobby (7-digit code, or browse open lobbies).
 
@@ -71,6 +75,8 @@ A web app that recreates the Wii system: a Wii-style channel menu where each cha
 
 Turns rotate one bowler per frame. The host controls start, play again, and quit.
 
+**Bowling code:** `src/lib/bowling/physics.ts` (`simulateRoll`) simulates a whole roll up front from a `Launch` and a `PinMask` (`pins.ts`), and `alley.ts` plays the recording back. The thrower's desktop turns aim plus swing into a `Launch` with `launchFrom` (`shot.ts`); broadcast that Launch (checked with `isLaunch`), never the aim and swing, because the trig in `launchFrom` isn't guaranteed to round the same way in every browser. Standing pins are re-spotted between rolls, so the pin mask is the only state carried over. `BowlingGame.tsx` runs the turn loop, and the keyboard (arrows, A/Enter, hold Space, Esc) works as well as the phone.
+
 **Determinism rules (breaking any of them silently desyncs clients):** pin one exact Rapier version, use a fixed physics timestep separate from the render loop, build the starting state from shared constants, and never use randomness or wall-clock time inside the simulation.
 
 **Game config is two independent axes** that can be combined freely:
@@ -81,7 +87,7 @@ Keep frame count and the scoring algorithm decoupled. The "last frame" is `frame
 
 **Data model** (`md/09-database-schema.md`): `profiles`, `lobbies`, `games` (store `frame_count` and `scoring_mode`), `game_players` (turn order, bots, final total and rank), `frames` (`roll1`–`roll3`), and `pairings`. **Only rolls are stored.** Per-frame scores come from one pure scoring function, so there is no `scores` table. Leaderboards are a query over `game_players`, grouped per game and per mode combination, not global.
 
-**Phone controller:** iOS only gives motion data after `DeviceMotionEvent.requestPermission()` is called from a tap, over HTTPS, so testing on a phone during local development needs a tunnel such as ngrok. Use the Wake Lock API to keep the phone screen on.
+**Phone controller:** iOS only gives motion data after `DeviceMotionEvent.requestPermission()` is called from a tap, over HTTPS, so testing on a phone during local development needs the ngrok tunnel (README → Testing on a phone) and `NEXT_PUBLIC_APP_URL`, the origin put in the pairing QR code (in production it's just the site's own address). The phone can't reach local Supabase, so a dev-only rewrite serves it at `/supabase` (Realtime websocket included) and `src/lib/supabase/controller.ts` uses that; the phone keeps its anonymous session in localStorage, separate from desktop cookies. The desktop end is `RemoteProvider` in `src/app/bowling/layout.tsx`; the phone is `/controller`. Throw math is `src/lib/controller/throw.ts` and the message format `src/lib/controller/protocol.ts` (desktops must run throws through `parseThrow` and buttons through `parseButton`). The phone is a Wii Remote (`WiiRemote.tsx`): d-pad, A, the B trigger (hold, swing, release = throw) and Home. It sends raw button down/up events and games give them meaning through `useRemote().onButton`, so keep game logic off the phone. Use the Wake Lock API to keep the phone screen on.
 
 ## Out of scope for now
 

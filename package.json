@@ -1,10 +1,11 @@
 {
-  "name": "whatwiplaying",
+  "name": "whatwiiplaying",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/finish-export.mjs",
+    "package": "tar -czf whatwiiplaying-site.tar.gz -C out .",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
@@ -19,11 +20,13 @@
     "@dimforge/rapier3d-deterministic-compat": "0.21.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.48.0",
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "uqr": "^0.1.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

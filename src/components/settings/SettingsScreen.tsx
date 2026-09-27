@@ -20,7 +20,7 @@ export function SettingsScreen({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-black text-white">
+    <div data-sound="settings-select" data-hover-sound="settings-hover" className="flex min-h-dvh flex-col bg-black text-white">
       <header className="flex items-end justify-between gap-4 px-[3%] pt-6 sm:pt-8">
         <h1 className="rounded-t-2xl bg-gradient-to-b from-[#9d9d9d] to-[#7c7c7c] px-5 pt-2 pb-1 text-2xl font-semibold text-[#1c1c1c] sm:px-8 sm:text-4xl">
           {title}
@@ -37,7 +37,7 @@ export function SettingsScreen({
 
       <div className="mx-[1%] h-[3px] bg-[#e6e6e6]" />
       <footer className="flex items-center justify-between gap-4 px-[6%] py-5 sm:py-6">
-        <Link href={backHref} className="wii-back">
+        <Link href={backHref} data-sound="settings-back" className="wii-back">
           Back
         </Link>
         {footerRight}

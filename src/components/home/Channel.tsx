@@ -19,6 +19,7 @@ export function Channel({ label, children }: { label: string; children: ReactNod
   return (
     <div
       role="img"
+      data-hoverable
       aria-label={`${label} channel, coming soon`}
       title={`${label} · coming soon`}
       className={`${TILE} ${TILE_HOVER} bg-white`}

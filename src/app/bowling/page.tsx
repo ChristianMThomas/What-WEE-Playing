@@ -3,7 +3,7 @@ import Link from "next/link";
 import { WiiBowlingLogo } from "@/components/bowling/WiiBowlingLogo";
 import { BowlingArt } from "@/components/home/ChannelArt";
 
-export const metadata: Metadata = { title: "Wii Bowling · WhatWiPlaying" };
+export const metadata: Metadata = { title: "Wii Bowling · WhatWiiPlaying" };
 
 // The game's title screen. The home menu's Bowling channel zooms up to fill the
 // screen with the same art, so it reads as one continuous motion.
@@ -30,7 +30,8 @@ export default function BowlingTitlePage() {
         aria-label="Title screen"
         className="title-rise relative grid grid-cols-2 gap-4 border-t-4 border-[#b9b9b9] bg-[repeating-linear-gradient(to_bottom,#e9e9e9_0_3px,#f5f5f5_3px_6px)] px-[6%] py-6 sm:gap-16 sm:px-[14%] sm:py-10"
       >
-        <Link href="/" className="wii-pill">
+        {/* Silent: the home menu plays the zoom-out sound as it shrinks back into the tile. */}
+        <Link href="/" data-sound="none" className="wii-pill">
           Wii Menu
         </Link>
         <Link href="/bowling/play" className="wii-pill">

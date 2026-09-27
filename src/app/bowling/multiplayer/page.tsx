@@ -4,7 +4,7 @@ import { LogIn, Plus } from "lucide-react";
 import { BowlingPanel, BowlingScreen } from "@/components/bowling/BowlingScreen";
 import { PhoneRemotePanel } from "@/components/bowling/PhoneRemotePanel";
 
-export const metadata: Metadata = { title: "Multiplayer · WhatWiPlaying" };
+export const metadata: Metadata = { title: "Multiplayer · WhatWiiPlaying" };
 
 const OPTIONS = [
   { href: "/bowling/lobby", label: "Create Lobby", detail: "Get a code to share with friends", Icon: Plus },
