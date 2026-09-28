@@ -1,8 +1,12 @@
 // The boot notice (src/app/notice): shown once per browser session, like the
 // Wii's health and safety screen at power-on.
 
-/** Set when the notice is acknowledged. A session cookie, so it shows again after the browser closes. */
-export const NOTICE_COOKIE = "wwp-notice";
+/**
+ * Set when the notice is acknowledged. A session cookie, so it shows again after the browser closes.
+ * Not "wwp-notice": the old server version set that one HttpOnly, and page scripts can't read or
+ * overwrite an HttpOnly cookie, so browsers still holding it would loop back to the notice forever.
+ */
+export const NOTICE_COOKIE = "wwp-notice-seen";
 
 /** Whether this browser session has seen the notice. Browser only. */
 export function noticeSeen(): boolean {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { BlackScreen } from "@/components/BlackScreen";
 import { UiSounds } from "@/components/UiSounds";
 import { MenuMusic } from "@/components/MenuMusic";
 import { SessionProvider } from "@/components/session/SessionProvider";
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SessionProvider>{children}</SessionProvider>
         <MenuMusic />
         <UiSounds />
+        <BlackScreen />
       </body>
     </html>
   );

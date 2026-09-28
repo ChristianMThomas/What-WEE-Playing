@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
+import { stopMenuMusic } from "@/components/MenuMusic";
 import { useProfile } from "@/components/session/SessionProvider";
 import { BOT_LOOK, BOT_NAME } from "@/lib/bowling/bot";
 import { gameConfigToSearch } from "@/lib/bowling/gameConfig";
@@ -43,7 +44,11 @@ export function SinglePlayerSetup() {
             type="button"
             className="wii-pill h-14 w-48 sm:h-16 sm:w-64"
             disabled={starting}
-            onClick={() => setStarting(true)}
+            data-sound="sports-ready"
+            onClick={() => {
+              stopMenuMusic();
+              setStarting(true);
+            }}
           >
             Start
           </button>

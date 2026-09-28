@@ -13,7 +13,7 @@ const MODES = [
 
 export default function PlayModePage() {
   return (
-    <BowlingScreen title="Bowling" backHref="/bowling">
+    <BowlingScreen title="Bowling" backHref="/">
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <BowlingPanel title="How do you want to play?">
           <div className="grid flex-1 gap-4 sm:grid-cols-2 sm:gap-6">

@@ -1,28 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
-
-// The channel the player is in, so the home menu knows which tile to zoom back
-// out to. Module state, so it survives client-side navigation but not a reload.
-let current: string | null = null;
-
-/** Whether the player just came back from this channel. */
-export function isReturningFrom(href: string) {
-  return current === href;
-}
-
-export function clearChannel() {
-  current = null;
-}
+import { coverWithBlack } from "@/components/BlackScreen";
 
 /**
- * Rendered in a channel's layout. Marks the player as inside the channel, so
- * going back to the home menu, by the Wii Menu button or the browser's Back,
- * zooms out to its tile.
+ * Rendered in a channel's layout. Leaving the channel always goes through the
+ * black screen, like quitting a Wii game; the channel's own exits use BlackLink,
+ * and this covers the browser's Back and Forward.
  */
 export function InChannel({ href }: { href: string }) {
   useEffect(() => {
-    current = href;
+    const onPopState = () => {
+      const path = location.pathname;
+      if (path !== href && !path.startsWith(`${href}/`)) coverWithBlack(path);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   }, [href]);
   return null;
 }

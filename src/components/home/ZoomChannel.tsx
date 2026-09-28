@@ -7,14 +7,12 @@ import { createPortal } from "react-dom";
 import { stopMenuMusic } from "@/components/MenuMusic";
 import { playSound, type SoundName } from "@/lib/sounds";
 import { ChannelGloss, TILE, TILE_HOVER } from "./Channel";
-import { clearChannel, isReturningFrom } from "./InChannel";
 
 const ZOOM_MS = 550;
 
 interface Zoom {
-  direction: "in" | "out";
-  /** The tile's position on screen; unknown until measured when zooming out. */
-  tile: DOMRect | null;
+  /** The tile's position on screen. */
+  tile: DOMRect;
   /** Whether the art currently fills the screen. */
   full: boolean;
 }
@@ -24,9 +22,8 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
 /**
  * A playable channel. Clicking it zooms the channel's art from the tile up to
  * full screen, like opening a channel on the Wii, then opens the channel page,
- * which starts on the same art so the hand-off is seamless. Coming back from the
- * channel (see InChannel) does the reverse: the art starts full screen and
- * shrinks back into the tile.
+ * which starts on the same art so the hand-off is seamless. Leaving the channel
+ * goes back through a black screen instead (see InChannel).
  */
 export function ZoomChannel({
   href,
@@ -44,37 +41,19 @@ export function ZoomChannel({
   children: ReactNode;
 }) {
   const router = useRouter();
-  const link = useRef<HTMLAnchorElement>(null);
   const navigated = useRef(false);
-  // Start full screen when coming back from this channel, so the home menu never shows without it.
-  const [zoom, setZoom] = useState<Zoom | null>(() =>
-    typeof window !== "undefined" && isReturningFrom(href) && !reducedMotion()
-      ? { direction: "out", tile: null, full: true }
-      : null,
-  );
+  const [zoom, setZoom] = useState<Zoom | null>(null);
 
   useEffect(() => {
     router.prefetch(href);
   }, [router, href]);
 
   useEffect(() => {
-    if (!isReturningFrom(href)) return;
-    clearChannel();
-    playSound("zoom-out-game");
-  }, [href]);
-
-  useEffect(() => {
-    if (!zoom || zoom.full === (zoom.direction === "in")) return;
-    // Paint the overlay where the zoom starts first, then move it, so the transition runs.
+    if (!zoom || zoom.full) return;
+    // Paint the overlay over the tile first, then grow it, so the transition runs.
     let inner = 0;
     const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() =>
-        setZoom((z) =>
-          z?.direction === "in"
-            ? { ...z, full: true }
-            : z && { ...z, tile: link.current?.getBoundingClientRect() ?? null, full: false },
-        ),
-      );
+      inner = requestAnimationFrame(() => setZoom((z) => z && { ...z, full: true }));
     });
     return () => {
       cancelAnimationFrame(outer);
@@ -82,20 +61,15 @@ export function ZoomChannel({
     };
   }, [zoom]);
 
-  // If transitionend never fires (tab hidden, etc.), finish anyway.
-  const direction = zoom?.direction;
+  // If transitionend never fires (tab hidden, etc.), open anyway.
+  const zooming = zoom !== null;
   useEffect(() => {
-    if (!direction) return;
-    const fallback = setTimeout(finish, ZOOM_MS + 250);
+    if (!zooming) return;
+    const fallback = setTimeout(open, ZOOM_MS + 250);
     return () => clearTimeout(fallback);
-    // finish only reads refs, props and the setter, so it doesn't need to be a dependency.
+    // open only reads refs, props and the router, so it doesn't need to be a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [direction]);
-
-  function finish() {
-    if (direction === "out") return setZoom(null);
-    open();
-  }
+  }, [zooming]);
 
   function open() {
     if (navigated.current) return;
@@ -109,18 +83,16 @@ export function ZoomChannel({
     // Let new-tab and other modified clicks behave like a normal link.
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    if (zoom?.direction === "in") return;
+    if (zoom) return;
     stopMenuMusic();
     playSound("zoom-in-game");
     if (reducedMotion()) return open();
-    setZoom({ direction: "in", tile: e.currentTarget.getBoundingClientRect(), full: false });
+    setZoom({ tile: e.currentTarget.getBoundingClientRect(), full: false });
   }
 
-  const tile = zoom?.tile;
   return (
     <>
       <Link
-        ref={link}
         href={href}
         onClick={onClick}
         aria-label={`${label} channel`}
@@ -134,14 +106,14 @@ export function ZoomChannel({
         createPortal(
           <div
             aria-hidden="true"
-            onTransitionEnd={(e) => e.propertyName === "width" && finish()}
+            onTransitionEnd={(e) => e.propertyName === "width" && open()}
             className="fixed z-50 overflow-hidden ease-in-out"
             style={{
               transitionProperty: "top, left, width, height, border-radius",
               transitionDuration: `${ZOOM_MS}ms`,
-              ...(zoom.full || !tile
+              ...(zoom.full
                 ? { top: 0, left: 0, width: "100vw", height: "100dvh", borderRadius: 0 }
-                : { top: tile.top, left: tile.left, width: tile.width, height: tile.height, borderRadius: 14 }),
+                : { top: zoom.tile.top, left: zoom.tile.left, width: zoom.tile.width, height: zoom.tile.height, borderRadius: 14 }),
             }}
           >
             {zoomArt}

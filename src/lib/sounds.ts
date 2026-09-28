@@ -9,8 +9,11 @@ const FILES = {
   "settings-select": "/audio/settings-select.wav",
   "settings-back": "/audio/settings-back.wav",
   "zoom-in-game": "/audio/zoom-in-game.wav",
-  "zoom-out-game": "/audio/zoom-out-game.wav",
   "bowling-startup": "/audio/bowling-startup.mp3",
+  // Menus inside every sports channel.
+  "sports-scroll": "/audio/sports_scroll.wav",
+  "sports-click": "/audio/sports_click.wav",
+  "sports-ready": "/audio/sports_ready.wav",
 } as const;
 
 export type SoundName = keyof typeof FILES;
@@ -23,6 +26,8 @@ let ctx: AudioContext | null = null;
 let output: GainNode | null = null;
 const files = new Map<SoundName, Promise<ArrayBuffer>>();
 const buffers = new Map<SoundName, Promise<AudioBuffer>>();
+/** When the latest play of each sound ends. */
+const endings = new Map<SoundName, Promise<void>>();
 
 export function isSoundName(name: string): name is SoundName {
   return Object.hasOwn(FILES, name);
@@ -62,18 +67,32 @@ export function unlockSounds() {
   }
 }
 
-/** Plays a sound. Does nothing until audio is unlocked or if the file failed to load. */
-export function playSound(name: SoundName) {
+/**
+ * Plays a sound, resolving when it ends. Does nothing until audio is unlocked or
+ * if the file failed to load.
+ */
+export function playSound(name: SoundName): Promise<void> {
   const buffer = buffers.get(name);
-  if (!ctx || !output || !buffer) return;
+  if (!ctx || !output || !buffer) return Promise.resolve();
   const asked = performance.now();
-  buffer
-    .then((b) => {
-      if (!ctx || !output || performance.now() - asked > MAX_DELAY_MS) return;
-      const source = ctx.createBufferSource();
-      source.buffer = b;
-      source.connect(output);
-      source.start();
-    })
+  const ended = buffer
+    .then(
+      (b) =>
+        new Promise<void>((resolve) => {
+          if (!ctx || !output || performance.now() - asked > MAX_DELAY_MS) return resolve();
+          const source = ctx.createBufferSource();
+          source.buffer = b;
+          source.connect(output);
+          source.onended = () => resolve();
+          source.start();
+        }),
+    )
     .catch(() => {});
+  endings.set(name, ended);
+  return ended;
+}
+
+/** Resolves once the latest play of a sound has ended, or right away if it isn't playing. */
+export function soundEnded(name: SoundName): Promise<void> {
+  return endings.get(name) ?? Promise.resolve();
 }

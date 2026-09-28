@@ -436,7 +436,7 @@ export function BowlingGame({ me, bot, config }: { me: Player; bot: Player; conf
               ))}
             </ol>
             <div className="flex justify-center gap-3">
-              <button type="button" className="wii-button wii-button-primary" onClick={playAgain}>
+              <button type="button" className="wii-button wii-button-primary" data-sound="sports-ready" onClick={playAgain}>
                 Play Again
               </button>
               <Link href="/bowling/play" className="wii-button">

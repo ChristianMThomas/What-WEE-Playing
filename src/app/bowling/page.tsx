@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { BlackLink } from "@/components/BlackScreen";
 import { WiiBowlingLogo } from "@/components/bowling/WiiBowlingLogo";
 import { BowlingArt } from "@/components/home/ChannelArt";
 
@@ -30,13 +30,13 @@ export default function BowlingTitlePage() {
         aria-label="Title screen"
         className="title-rise relative grid grid-cols-2 gap-4 border-t-4 border-[#b9b9b9] bg-[repeating-linear-gradient(to_bottom,#e9e9e9_0_3px,#f5f5f5_3px_6px)] px-[6%] py-6 sm:gap-16 sm:px-[14%] sm:py-10"
       >
-        {/* Silent: the home menu plays the zoom-out sound as it shrinks back into the tile. */}
-        <Link href="/" data-sound="none" className="wii-pill">
+        <BlackLink href="/" className="wii-pill">
           Wii Menu
-        </Link>
-        <Link href="/bowling/play" className="wii-pill">
+        </BlackLink>
+        {/* Replace, so backing out of the game menus skips this screen and leaves the channel. */}
+        <BlackLink href="/bowling/play" replace className="wii-pill">
           Start
-        </Link>
+        </BlackLink>
       </nav>
     </div>
   );
