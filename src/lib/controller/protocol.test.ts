@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { controllerTopic, parseButton, parseThrow } from "./protocol";
+import { controllerTopic, parseAim, parseButton, parseThrow } from "./protocol";
 
 describe("controller protocol", () => {
   it("names the channel after the desktop's user", () => {
@@ -39,6 +39,25 @@ describe("controller protocol", () => {
       { v: 1, button: "toString", pressed: true },
     ]) {
       expect(parseButton(payload)).toBeNull();
+    }
+  });
+
+  it("accepts an aim as sent", () => {
+    const message = { v: 1, yaw: -12.4, pitch: 3.1, roll: 0 };
+    expect(parseAim(message)).toEqual(message);
+  });
+
+  it("rejects junk and out-of-range aims", () => {
+    for (const payload of [
+      null,
+      "aim",
+      { v: 2, yaw: 0, pitch: 0, roll: 0 },
+      { v: 1, yaw: 0, pitch: 0 },
+      { v: 1, yaw: 120, pitch: 0, roll: 0 },
+      { v: 1, yaw: 0, pitch: 0, roll: Number.POSITIVE_INFINITY },
+      { v: 1, yaw: "0", pitch: 0, roll: 0 },
+    ]) {
+      expect(parseAim(payload)).toBeNull();
     }
   });
 });

@@ -1,11 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { aimFrom, relativeAim, type Aim } from "@/lib/controller/aim";
 import type { Button, ThrowParams } from "@/lib/controller/protocol";
 import { computeThrow, type MotionSample } from "@/lib/controller/throw";
 
 // Motion kept while B is held; a swing is well under this.
 const BUFFER_MS = 3000;
+/** How often at most the phone says where it points. */
+const POINTER_HZ = 25;
+/** Smaller moves than this aren't worth a message, so a phone lying still sends nothing. */
+const MIN_MOVE_DEG = 0.05;
+/** How long to wait for plain orientation events before falling back to the absolute ones. */
+const ORIENTATION_FALLBACK_MS = 1000;
+
+/** A tenth of a degree is finer than the pointer can be aimed; anything more is noise. */
+const round = ({ yaw, pitch, roll }: Aim): Aim => ({
+  yaw: Math.round(yaw * 10) / 10 || 0,
+  pitch: Math.round(pitch * 10) / 10 || 0,
+  roll: Math.round(roll * 10) / 10 || 0,
+});
 
 type Feedback = { kind: "sent"; params: ThrowParams } | { kind: "soft" } | { kind: "no-motion" } | null;
 
@@ -27,6 +41,75 @@ function useWakeLock() {
 }
 
 /**
+ * Streams where the phone points (md/11). Angles go out relative to the pose it
+ * was calibrated in, because no sensor knows where the screen is: the first
+ * reading sets that pose, and Recenter sets it again when the cursor has
+ * wandered off, which gyro drift makes it do eventually.
+ *
+ * Nothing is sent while the phone is still, or during a swing, when it's being
+ * thrown around and the game owns the buttons anyway.
+ */
+function usePointing(send: (aim: Aim) => void, swinging: boolean) {
+  const baseline = useRef<Aim | null>(null);
+  const reading = useRef<Aim | null>(null);
+  const sent = useRef<Aim | null>(null);
+  const sentAt = useRef(0);
+  const paused = useRef(swinging);
+  useEffect(() => {
+    paused.current = swinging;
+  }, [swinging]);
+
+  useEffect(() => {
+    let event: "deviceorientation" | "deviceorientationabsolute" = "deviceorientation";
+    const read = (e: DeviceOrientationEvent) => {
+      if (e.alpha === null && e.beta === null && e.gamma === null) return;
+      clearTimeout(fallback);
+      const now = e.timeStamp;
+      const aim = aimFrom({ alpha: e.alpha ?? 0, beta: e.beta ?? 0, gamma: e.gamma ?? 0 });
+      reading.current = aim;
+      baseline.current ??= aim;
+      if (paused.current || now - sentAt.current < 1000 / POINTER_HZ) return;
+
+      // Rounded here, and used as sent: nothing downstream re-reads the sensors.
+      const moved = round(relativeAim(aim, baseline.current));
+      const last = sent.current;
+      const still =
+        last !== null &&
+        Math.abs(moved.yaw - last.yaw) < MIN_MOVE_DEG &&
+        Math.abs(moved.pitch - last.pitch) < MIN_MOVE_DEG &&
+        Math.abs(moved.roll - last.roll) < MIN_MOVE_DEG;
+      if (still) return;
+      sent.current = moved;
+      sentAt.current = now;
+      send(moved);
+    };
+
+    // Chrome only fires the plain event where it can provide a relative
+    // orientation; where it can't, the absolute one does instead.
+    const fallback = setTimeout(() => {
+      window.removeEventListener(event, read);
+      event = "deviceorientationabsolute";
+      window.addEventListener(event, read);
+    }, ORIENTATION_FALLBACK_MS);
+
+    window.addEventListener(event, read);
+    return () => {
+      clearTimeout(fallback);
+      window.removeEventListener(event, read);
+    };
+  }, [send]);
+
+  /** Makes wherever the phone points now the middle of the screen. */
+  return useCallback(() => {
+    if (!reading.current) return;
+    baseline.current = reading.current;
+    sent.current = null;
+    sentAt.current = 0;
+    navigator.vibrate?.(20);
+  }, []);
+}
+
+/**
  * The phone as a Wii Remote (md/06): d-pad at the top, A below it, the B
  * trigger under A, then Home. Every button reports down and up to the desktop,
  * and the game on screen decides what they do. B is also the swing: hold it,
@@ -36,15 +119,18 @@ export function WiiRemote({
   online,
   onButton,
   onThrow,
+  onAim,
 }: {
   online: boolean;
   onButton: (button: Button, pressed: boolean) => void;
   onThrow: (params: ThrowParams) => void;
+  onAim: (aim: Aim) => void;
 }) {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [swinging, setSwinging] = useState(false);
   const samples = useRef<MotionSample[]>([]);
   const recording = useRef(false);
+  const recenter = usePointing(onAim, swinging);
   useWakeLock();
 
   useEffect(() => {
@@ -150,6 +236,15 @@ export function WiiRemote({
         </p>
       </div>
 
+      <button
+        type="button"
+        data-sound="none"
+        onClick={recenter}
+        className="mt-1 shrink-0 rounded-full border border-[#cfd4da] bg-white/70 px-4 py-1.5 text-xs font-extrabold tracking-wide text-[#6b7280] active:bg-[#e6f4fd] active:text-[#1576c2]"
+      >
+        ⌖ RECENTER
+      </button>
+
       <p role="status" className="min-h-6 text-center text-sm font-semibold text-[#555]">
         {!online
           ? "Reconnecting to your screen…"
@@ -161,7 +256,7 @@ export function WiiRemote({
                 ? "Swing harder, then let go of B."
                 : feedback?.kind === "no-motion"
                   ? "No motion data. Check that this site has motion access."
-                  : "Hold B, swing, and let go to bowl."}
+                  : "Point at your screen to move the hand. Recenter if it drifts."}
       </p>
     </div>
   );

@@ -13,11 +13,12 @@ export default function AccountPage() {
     <SettingsScreen title="Account Management" backHref="/settings">
       <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
         <LogOutButton iconClassName={icon} />
-        <button type="button" className="wii-pill" aria-disabled="true" title="Coming soon">
+        {/* Account controls stay off the phone remote (NO_REMOTE in PointerLayer). */}
+        <button type="button" data-no-remote className="wii-pill" aria-disabled="true" title="Coming soon">
           <UserPen aria-hidden="true" className={icon} />
           Change Account Info
         </button>
-        <button type="button" className="wii-pill text-[#b3261e]" aria-disabled="true" title="Coming soon">
+        <button type="button" data-no-remote className="wii-pill text-[#b3261e]" aria-disabled="true" title="Coming soon">
           <Trash2 aria-hidden="true" className={`${icon} text-[#d9534f]`} />
           Delete Account
         </button>

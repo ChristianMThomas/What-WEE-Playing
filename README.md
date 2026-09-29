@@ -69,7 +69,15 @@ Supabase Studio runs at http://localhost:54323, and the test email inbox is at h
 
 ### Testing on a phone
 
-iOS only gives websites motion data over HTTPS, and only after you tap to grant permission. To try the controller on a real phone during development, expose the dev server through [ngrok](https://ngrok.com):
+iOS only gives websites motion and orientation data over HTTPS, and only after you tap to grant permission, so the phone needs a real tunnel — its own address on your network won't do. Either tunnel works; the URL you end up with goes in `NEXT_PUBLIC_APP_URL`, which is what the pairing QR code points at.
+
+**[Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/)** — no account, but a new URL each run:
+
+1. `winget install Cloudflare.cloudflared` (or `brew install cloudflared`).
+2. `cloudflared tunnel --url http://localhost:3000`, and copy the `https://….trycloudflare.com` URL it prints.
+3. Put it in `.env.local` as `NEXT_PUBLIC_APP_URL` and restart `npm run dev`.
+
+**[ngrok](https://ngrok.com)** — a free account, in return for a domain that stays the same:
 
 1. Install ngrok, sign up for a free account, and run `ngrok config add-authtoken <token>`.
 2. Claim your free static domain in the ngrok dashboard (Domains), e.g. `your-name.ngrok-free.app`.
@@ -78,9 +86,10 @@ iOS only gives websites motion data over HTTPS, and only after you tap to grant 
    NEXT_PUBLIC_APP_URL=https://your-name.ngrok-free.app
    ```
 4. Run the tunnel alongside the dev server: `ngrok http --url=your-name.ngrok-free.app 3000`
-5. On your computer, open Bowling and press **Pair Phone**, then scan the code with your phone's camera. ngrok shows a one-time "Visit Site" warning page on the phone first.
 
-Only the one tunnel is needed. The local Supabase stack isn't reachable from a phone, so in development it's also served under `/supabase` on the same site (see `next.config.ts`), and the controller uses that.
+Then, with either one: on your computer press **Pair Phone** in the bottom bar of the home menu (or in Bowling) and scan the code with your phone's camera. ngrok shows a one-time "Visit Site" warning page on the phone first; Cloudflare doesn't.
+
+Only the one tunnel is needed. The local Supabase stack isn't reachable from a phone, so in development it's also served under `/supabase` on the same site (see `next.config.ts`), and the controller uses that. Write `NEXT_PUBLIC_SUPABASE_URL` without a trailing slash — with one, that rewrite doesn't happen and the phone can't reach Supabase.
 
 ## Deploying
 

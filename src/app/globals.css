@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+/* The phone remote's pointer marks what it is over with data-pointed, and what
+   A is pressing with data-pointed-active (PointerLayer). Redefining the two
+   built-in variants means every `hover:` and `active:` style in the app lights
+   up for the pointer as well, with nothing to keep in step. */
+@custom-variant hover {
+  @media (hover: hover) {
+    &:hover {
+      @slot;
+    }
+  }
+  &[data-pointed] {
+    @slot;
+  }
+}
+
+@custom-variant active {
+  &:active {
+    @slot;
+  }
+  &[data-pointed-active] {
+    @slot;
+  }
+}
+
 /* Wii menu palette. The Wii is always light, so there's no dark variant. */
 @theme {
   --color-wii-blue: #34bfed;

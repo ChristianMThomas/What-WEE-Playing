@@ -3,12 +3,12 @@
 import { useEffect } from "react";
 import { isSoundName, playSound, preloadSounds, unlockSounds } from "@/lib/sounds";
 
-/** What counts as clickable. */
-const CLICKABLE =
+/** What counts as clickable. Shared with the phone's pointer (PointerLayer). */
+export const CLICKABLE =
   'a[href], button, [role="button"], summary, input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"]';
 
 /** Clickable things plus anything marked `data-hoverable`, like the channels that aren't playable yet. */
-const HOVERABLE = `${CLICKABLE}, [data-hoverable]`;
+export const HOVERABLE = `${CLICKABLE}, [data-hoverable]`;
 
 /**
  * Menu sound effects for the whole app. Lives in the root layout and listens at

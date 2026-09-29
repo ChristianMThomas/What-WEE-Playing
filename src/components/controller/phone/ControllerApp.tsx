@@ -2,6 +2,7 @@
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Aim } from "@/lib/controller/aim";
 import { controllerTopic, EVENTS, PRESENCE, type Button, type ThrowParams } from "@/lib/controller/protocol";
 import { createControllerClient } from "@/lib/supabase/controller";
 import { QrScanner } from "./QrScanner";
@@ -98,6 +99,8 @@ export function ControllerApp() {
       });
       joined
         .on("broadcast", { event: EVENTS.unpaired }, () => forget("Your screen unpaired this phone. Scan a new code to reconnect."))
+        // The cursor landed on something over there, like the Wii Remote's little knock.
+        .on("broadcast", { event: EVENTS.rumble }, () => navigator.vibrate?.(8))
         .subscribe((status, err) => {
           if (cancelled) return;
           if (status === "SUBSCRIBED") {
@@ -131,6 +134,10 @@ export function ControllerApp() {
 
   const sendButton = useCallback((button: Button, pressed: boolean) => {
     void channel.current?.send({ type: "broadcast", event: EVENTS.button, payload: { v: 1, button, pressed } });
+  }, []);
+
+  const sendAim = useCallback(({ yaw, pitch, roll }: Aim) => {
+    void channel.current?.send({ type: "broadcast", event: EVENTS.aim, payload: { v: 1, yaw, pitch, roll } });
   }, []);
 
   return (
@@ -171,10 +178,20 @@ export function ControllerApp() {
 
         {step.kind === "start" && <StartStep onReady={() => setStep({ kind: "remote" })} />}
 
-        {step.kind === "remote" && <WiiRemote online={online} onButton={sendButton} onThrow={sendThrow} />}
+        {step.kind === "remote" && (
+          <WiiRemote online={online} onButton={sendButton} onThrow={sendThrow} onAim={sendAim} />
+        )}
       </div>
     </main>
   );
+}
+
+/** iOS gates motion and orientation separately, and each behind its own tap. */
+type SensorEvent = { requestPermission?: () => Promise<"granted" | "denied"> } | undefined;
+
+async function allow(sensor: SensorEvent) {
+  if (typeof sensor?.requestPermission !== "function") return true;
+  return (await sensor.requestPermission().catch(() => "denied" as const)) === "granted";
 }
 
 /**
@@ -185,15 +202,17 @@ function StartStep({ onReady }: { onReady: () => void }) {
   const [problem, setProblem] = useState<string | null>(null);
 
   async function start() {
-    const Motion = window.DeviceMotionEvent as unknown as { requestPermission?: () => Promise<"granted" | "denied"> } | undefined;
-    if (!Motion) return setProblem("This browser doesn't share motion data, so it can't be a remote.");
-    if (typeof Motion.requestPermission === "function") {
-      const answer = await Motion.requestPermission().catch(() => "denied" as const);
-      if (answer !== "granted") {
-        return setProblem(
-          "Motion access was turned down. To allow it, clear this site's data in Settings → Safari → Advanced → Website Data, then reload.",
-        );
-      }
+    const Motion = window.DeviceMotionEvent as unknown as SensorEvent;
+    const Orientation = window.DeviceOrientationEvent as unknown as SensorEvent;
+    if (!Motion || !Orientation) return setProblem("This browser doesn't share motion data, so it can't be a remote.");
+    // Both asked for in the one tap: motion is the swing, orientation is the
+    // pointer. Started together rather than one after the other, because Safari
+    // only allows the ask while the tap is still fresh.
+    const answers = await Promise.all([allow(Motion), allow(Orientation)]);
+    if (answers.some((granted) => !granted)) {
+      return setProblem(
+        "Motion access was turned down. To allow it, clear this site's data in Settings → Safari → Advanced → Website Data, then reload.",
+      );
     }
     onReady();
   }
@@ -206,7 +225,7 @@ function StartStep({ onReady }: { onReady: () => void }) {
         </p>
       )}
       <p className="text-2xl font-bold">Paired!</p>
-      <p className="text-[#555]">Tap Start and allow motion access so your swings can bowl.</p>
+      <p className="text-[#555]">Tap Start and allow motion access, so you can point at your screen and bowl.</p>
       <button type="button" className="wii-pill" onClick={() => void start()}>
         Start
       </button>

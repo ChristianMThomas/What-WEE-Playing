@@ -8,7 +8,8 @@ import { securityHeaders } from "./src/lib/csp";
 // scripts/finish-export.mjs adds to the build.
 const isDev = process.env.NODE_ENV === "development";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+// Without a trailing slash, to match src/lib/supabase/env.ts.
+const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
 // The local Supabase stack is plain http on this machine, which a phone can't
 // reach. Serve it under /supabase on this site instead (Realtime's websocket
 // included), so a phone on the https tunnel only needs this one origin.

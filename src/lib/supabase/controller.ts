@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
+import { REALTIME_EVENTS_PER_SECOND, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
 
 // A local Supabase stack (http://127.0.0.1) is only reachable from this machine,
 // so a phone uses the same stack through this site's /supabase rewrite (next.config.ts).
@@ -18,6 +18,7 @@ export function createControllerClient() {
   const url = LOCAL.test(SUPABASE_URL) ? `${window.location.origin}/supabase` : SUPABASE_URL;
   client = createSupabaseClient<Database>(url, SUPABASE_PUBLISHABLE_KEY, {
     auth: { persistSession: true, autoRefreshToken: true, storageKey: "wwp-controller-auth" },
+    realtime: { params: { eventsPerSecond: REALTIME_EVENTS_PER_SECOND } },
   });
   return client;
 }
