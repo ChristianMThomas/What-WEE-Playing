@@ -218,6 +218,12 @@ export function BowlingGame({ me, bot, config }: { me: Player; bot: Player; conf
   );
 
   useEffect(() => remote.onButton(({ button, pressed }) => press(button, pressed)), [remote, press]);
+
+  // While the game is being played the phone's buttons are the game's, so the
+  // pointer keeps out of the way. Its menus hand them back, to be clicked.
+  const grab = remote.grab;
+  const inMenu = paused || phase === "over" || pairing;
+  useEffect(() => (inMenu ? undefined : grab()), [inMenu, grab]);
   useEffect(
     () =>
       remote.onThrow((message) => {

@@ -46,11 +46,13 @@ export function securityHeaders(supabaseUrl: string, isDev: boolean): [string, s
     ["X-Content-Type-Options", "nosniff"],
     // Keeps pairing tokens in URLs from leaking to other sites through Referer.
     ["Referrer-Policy", "strict-origin-when-cross-origin"],
-    // Only this site may use the phone's camera (QR scan), motion sensors (swings)
-    // and wake lock (/controller); everything else is off.
+    // Only this site may use the phone's camera (QR scan), motion sensors (swings
+    // and the pointer) and wake lock (/controller); everything else is off.
+    // The magnetometer is needed because Chromium gates deviceorientationabsolute
+    // on it, which is the pointer's fallback where the relative event never fires.
     [
       "Permissions-Policy",
-      "camera=(self), accelerometer=(self), gyroscope=(self), screen-wake-lock=(self), magnetometer=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+      "camera=(self), accelerometer=(self), gyroscope=(self), magnetometer=(self), screen-wake-lock=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
     ],
     ...(isDev ? [] : [["Strict-Transport-Security", "max-age=63072000; includeSubDomains"] as [string, string]]),
   ];

@@ -17,9 +17,18 @@
 - **Primary:** desktop shows a QR code containing a short-lived pairing token; scanning it connects the phone with no login
 - **Fallback:** log in on the phone; it finds the desktop via user ID
 - Phone controller page needs:
-  - A "Tap to enable motion" step — iOS requires `DeviceMotionEvent.requestPermission()` from a tap, over HTTPS
+  - A "Tap to enable motion" step — iOS requires `DeviceMotionEvent.requestPermission()` from a tap, over HTTPS, and `DeviceOrientationEvent.requestPermission()` separately for the pointer
   - Wake Lock API to keep the screen on while in use
 - Local dev on a phone needs HTTPS (ngrok / Cloudflare Tunnel, or a local cert)
+
+## Pointer Input
+- Hold the phone out at the screen and a hand cursor follows it, like the Wii Remote's IR pointer. It works everywhere, not just in a game: the remote lives in the root layout, so it points at the channel menu and the settings screens too
+- Nothing knows where the screen actually is, so the phone sends **angles relative to a calibrated pose**: the first reading after connecting sets it, and a **Recenter** control on the phone sets it again when gyro drift has moved the middle
+- The phone reads `deviceorientation` (`deviceorientationabsolute` where that never fires). Held like a remote — screen up, top edge towards the screen — the barrel is the device's +y axis, which works out to `yaw = -alpha`, `pitch = beta`, `roll = gamma`
+- The desktop turns degrees into pixels, so the sweep matches its own screen, and smooths towards the newest message every frame to cover transport jitter
+- Rate: at most 25 messages a second, and only while the phone is actually moving and not mid-swing, so a parked menu sends nothing. Supabase's client throttles broadcasts to 10/s by default, which `REALTIME_EVENTS_PER_SECOND` raises
+- **A** clicks whatever the hand is over and **B** goes back. The desktop marks that element `data-pointed`, which the redefined `hover` variant styles exactly like the mouse hovering it, and activates it with a real click, so links, forms and menu sounds need no special case
+- A game takes the buttons with `remote.grab()` while it's being played (bowling's turn loop), and the hand keeps out of the way until its menus hand them back
 
 ## Throw Input
 - Phone buffers motion samples while the button is held

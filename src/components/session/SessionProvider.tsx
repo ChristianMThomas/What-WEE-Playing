@@ -40,6 +40,14 @@ export function useProfile(): Profile {
   return profile;
 }
 
+/**
+ * The signed-in player, or null. For the few things in the root layout that sit
+ * outside the guard and so also render on /login and /controller.
+ */
+export function useOptionalProfile(): Profile | null {
+  return useContext(ProfileContext);
+}
+
 const withoutSlash = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
 
 async function loadSession(): Promise<Session> {

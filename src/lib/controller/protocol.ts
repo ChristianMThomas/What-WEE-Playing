@@ -11,6 +11,10 @@ export const EVENTS = {
   throw: "throw",
   /** Phone → desktop: a button went down or up. Every game reads the same buttons. */
   button: "button",
+  /** Phone → desktop: where the phone is pointing, streamed while it moves. */
+  aim: "aim",
+  /** Desktop → phone: a short buzz, for the cursor landing on something. */
+  rumble: "rumble",
   /** Desktop → phone: the desktop unpaired this phone, so it should stop and ask for a new code. */
   unpaired: "unpaired",
 } as const;
@@ -31,6 +35,22 @@ export interface ButtonMessage {
   button: Button;
   /** true when it went down, false when it came back up. */
   pressed: boolean;
+}
+
+export const AIM_LIMITS = {
+  /** Left/right from the calibrated pose, degrees; positive is to the right. */
+  yaw: { min: -90, max: 90 },
+  /** Up/down from it, degrees; positive is up. */
+  pitch: { min: -90, max: 90 },
+  /** How far the phone is rolled about its barrel, degrees. */
+  roll: { min: -180, max: 180 },
+} as const;
+
+export interface AimMessage {
+  v: 1;
+  yaw: number;
+  pitch: number;
+  roll: number;
 }
 
 export const THROW_LIMITS = {
@@ -69,6 +89,20 @@ export function parseThrow(payload: unknown): ThrowMessage | null {
     return null;
   }
   return { v: 1, id: p.id, speed: p.speed, angle: p.angle, spin: p.spin };
+}
+
+/**
+ * Checks an aim from the channel. These arrive many times a second while the
+ * phone moves, and the newest one always wins, so there is nothing to dedupe.
+ */
+export function parseAim(payload: unknown): AimMessage | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const p = payload as Record<string, unknown>;
+  if (p.v !== 1) return null;
+  if (!inRange(p.yaw, AIM_LIMITS.yaw) || !inRange(p.pitch, AIM_LIMITS.pitch) || !inRange(p.roll, AIM_LIMITS.roll)) {
+    return null;
+  }
+  return { v: 1, yaw: p.yaw, pitch: p.pitch, roll: p.roll };
 }
 
 /** Checks a button message from the channel. */

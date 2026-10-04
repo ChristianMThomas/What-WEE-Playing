@@ -88,8 +88,9 @@ export function PairPhoneDialog({ onClose }: { onClose: () => void }) {
               (README → Testing on a phone).
             </p>
           )}
+          {/* The token stays out of the page, tooltip included: it is a bearer string. */}
           {pairing && (
-            <p className="max-w-full truncate font-mono text-xs text-white/50" title={pairing.url}>
+            <p className="max-w-full truncate font-mono text-xs text-white/50">
               {pairing.url.replace(/\?t=.*/, "?t=…")}
             </p>
           )}

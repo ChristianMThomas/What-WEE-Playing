@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import { Clock } from "./Clock";
+import { PairPhoneButton } from "./PairPhoneButton";
 
 const ROUND_BUTTON =
   "flex size-16 items-center justify-center rounded-full border-[3px] border-[#c3c8cd] bg-gradient-to-b from-white to-[#e6e9ec] shadow-[inset_0_0_0_3px_#fff,0_2px_6px_rgb(0_0_0/0.12)] transition sm:size-20 hover:border-wii-blue hover:shadow-[inset_0_0_0_3px_#fff,0_0_0_4px_rgb(52_191_237/0.35)]";
@@ -29,9 +30,12 @@ export function HomeBar() {
       </svg>
 
       <div className="relative flex h-full items-end justify-between px-4 pb-5 sm:px-8 sm:pb-6">
-        <Link href="/settings" data-sound="settings" className={ROUND_BUTTON} aria-label="Settings" title="Settings">
-          <Settings aria-hidden="true" strokeWidth={2.25} className="size-8 text-[#8a8f94] sm:size-9" />
-        </Link>
+        <div className="flex items-end gap-3 sm:gap-4">
+          <Link href="/settings" data-sound="settings" className={ROUND_BUTTON} aria-label="Settings" title="Settings">
+            <Settings aria-hidden="true" strokeWidth={2.25} className="size-8 text-[#8a8f94] sm:size-9" />
+          </Link>
+          <PairPhoneButton className={ROUND_BUTTON} />
+        </div>
 
         {/* Spans the full width to center the clock, so it must let clicks through to the buttons below it. */}
         <div className="pointer-events-none absolute inset-x-0 top-[38%] flex justify-center sm:top-[34%]">

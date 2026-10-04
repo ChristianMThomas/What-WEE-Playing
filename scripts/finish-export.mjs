@@ -62,10 +62,10 @@ ${noIndex}
 
   # Pages always check for a new version; Next's build files have hashed
   # names that change with their content, so browsers can keep them.
-  <FilesMatch "\.html$">
+  <FilesMatch "\\.html$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
-  <FilesMatch "\.(js|css|woff2)$">
+  <FilesMatch "\\.(js|css|woff2)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>

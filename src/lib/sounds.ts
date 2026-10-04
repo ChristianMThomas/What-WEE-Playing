@@ -33,6 +33,15 @@ export function isSoundName(name: string): name is SoundName {
   return Object.hasOwn(FILES, name);
 }
 
+/**
+ * Whether sound still needs a real click or key press in this tab. Browsers
+ * only start audio after one, and a phone remote can't provide it: its presses
+ * arrive over a websocket, so the app would otherwise be silently silent.
+ */
+export function soundsLocked() {
+  return ctx?.state !== "running";
+}
+
 /** Downloads every sound so they're ready to decode once audio is unlocked. */
 export function preloadSounds() {
   for (const name of Object.keys(FILES) as SoundName[]) {
